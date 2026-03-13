@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Themes */
+:root {
+  --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --sub: #252836;
+  --text: #e8eaf0; --muted: #8b8fa8; --dim: #4a4e62; --accent: #7eb8f7;
+  --accent2: #3b5bdb; --badge-blue-bg: #1a3a6e; --badge-blue-fg: #7eb8f7;
+  --badge-white-bg: #2e2e3a; --badge-white-fg: #c4c8e0;
+}
+[data-theme="light"] {
+  --bg: #f0f2f8; --card: #ffffff; --border: #dde1f0; --sub: #f4f5fb;
+  --text: #1a1d27; --muted: #6b7080; --dim: #b0b4c8; --accent: #2563eb;
+  --accent2: #1d4ed8; --badge-blue-bg: #dbeafe; --badge-blue-fg: #1d4ed8;
+  --badge-white-bg: #e5e7eb; --badge-white-fg: #374151;
+}
+[data-theme="purple"] {
+  --bg: #0d0a1a; --card: #1a1428; --border: #2d2040; --sub: #221832;
+  --text: #ede8ff; --muted: #9b8fc0; --dim: #4a3d6a; --accent: #c084fc;
+  --accent2: #7c3aed; --badge-blue-bg: #2d1b5e; --badge-blue-fg: #c084fc;
+  --badge-white-bg: #2a2040; --badge-white-fg: #d0c8f0;
+}
+[data-theme="midnight"] {
+  --bg: #010409; --card: #0d1117; --border: #1c2128; --sub: #161b22;
+  --text: #e6edf3; --muted: #7d8590; --dim: #3d444d; --accent: #58a6ff;
+  --accent2: #1f6feb; --badge-blue-bg: #0d2547; --badge-blue-fg: #58a6ff;
+  --badge-white-bg: #1c2128; --badge-white-fg: #adbac7;
+}
+[data-theme="sunset"] {
+  --bg: #1a0a0f; --card: #27111a; --border: #3d1a28; --sub: #331220;
+  --text: #fde8ee; --muted: #b87a90; --dim: #5a2d40; --accent: #fb7185;
+  --accent2: #e11d48; --badge-blue-bg: #4c0d1e; --badge-blue-fg: #fb7185;
+  --badge-white-bg: #3a1520; --badge-white-fg: #fca5a5;
+}
+
+body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; transition: background 0.4s, color 0.4s; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; width: 100%; max-width: 480px; transition: background 0.4s, border-color 0.4s; }
+.top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 6px; }
+.day-label { font-size: 13px; color: var(--muted); }
+.day-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+select { background: var(--sub); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; font-size: 13px; cursor: pointer; transition: background 0.3s; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.badge-blue { background: var(--badge-blue-bg); color: var(--badge-blue-fg); }
+.badge-white { background: var(--badge-white-bg); color: var(--badge-white-fg); }
+.gear-btn { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); padding: 4px 8px; font-size: 14px; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+.gear-btn:hover { border-color: var(--accent); color: var(--accent); }
+.current-class { text-align: center; margin: 1.2rem 0; }
+.class-name { font-size: 1.5rem; font-weight: 700; color: var(--text); margin-bottom: 0.2rem; transition: opacity 0.4s; }
+.class-times { font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
+
+/* Flip countdown */
+.countdown-wrap { display: flex; justify-content: center; align-items: center; gap: 4px; margin-bottom: 4px; }
+.flip-seg { display: flex; align-items: center; }
+.flip-digit { position: relative; width: 2.2rem; height: 3.6rem; perspective: 300px; }
+.flip-digit .face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; font-weight: 800; letter-spacing: -0.02em; color: var(--accent); background: var(--sub); border-radius: 8px; backface-visibility: hidden; transition: color 0.5s; }
+.flip-digit .back { transform: rotateX(180deg); }
+.flip-digit.flipping .front { animation: flipFront 0.3s ease-in forwards; }
+.flip-digit.flipping .back { animation: flipBack 0.3s ease-out forwards; }
+@keyframes flipFront { from { transform: rotateX(0); } to { transform: rotateX(-90deg); } }
+@keyframes flipBack { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
+.flip-colon { font-size: 2.4rem; font-weight: 800; color: var(--accent); line-height: 1; padding-bottom: 4px; animation: blink 1s step-end infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.countdown-label { font-size: 12px; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* Progress bar */
+.progress-bar { background: var(--sub); border-radius: 99px; height: 8px; margin: 1rem 0; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 99px; transition: width 1s linear, background 2s ease; }
+.progress-fill.normal { background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+.progress-fill.urgent { background: linear-gradient(90deg, var(--accent2), var(--accent), #fb923c, #ef4444); }
+
+.next-up { background: var(--sub); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--muted); }
+.next-up span { color: var(--text); font-weight: 500; }
+.schedule-list { margin-top: 1.2rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+.period-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; transition: color 0.3s; }
+.period-row:last-child { border-bottom: none; }
+.period-row.active { color: var(--accent); font-weight: 600; }
+.period-row.done { color: var(--dim); }
+.period-row.upcoming { color: var(--muted); }
+.period-time { opacity: 0.7; font-size: 12px; }
+.no-class { text-align: center; padding: 2rem 0; color: var(--muted); }
+.no-class .big { font-size: 1.4rem; color: var(--text); font-weight: 600; margin-bottom: 0.5rem; }
+h2 { font-size: 15px; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
+
+/* Urgent pulse on class name */
+.class-name.urgent { animation: urgentPulse 2s ease-in-out infinite; }
+@keyframes urgentPulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+/* Overlay / Editor */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 100; }
+.overlay.open { display: flex; }
+.editor { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; }
+.editor h3 { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 1rem; }
+.tab-bar { display: flex; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
+.tab { background: var(--sub); border: 1px solid var(--border); border-radius: 8px; padding: 5px 12px; font-size: 13px; color: var(--muted); cursor: pointer; transition: background 0.2s, color 0.2s; }
+.tab.active { background: var(--badge-blue-bg); border-color: var(--accent2); color: var(--accent); }
+.field-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.field-row label { font-size: 12px; color: var(--muted); }
+.field-row input, .field-row select { background: var(--sub); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 7px 10px; font-size: 14px; width: 100%; }
+.field-row input:focus { outline: none; border-color: var(--accent); }
+.section-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 14px 0 8px; border-top: 1px solid var(--border); padding-top: 12px; }
+.btn-row { display: flex; gap: 8px; margin-top: 1rem; flex-wrap: wrap; }
+.btn { padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; font-weight: 500; transition: opacity 0.2s; }
+.btn:hover { opacity: 0.85; }
+.btn-save { background: var(--accent2); color: #fff; }
+.btn-cancel { background: var(--sub); color: var(--muted); border: 1px solid var(--border); }
+.btn-export { background: var(--sub); color: var(--accent); border: 1px solid var(--accent2); }
+.btn-share { background: var(--sub); color: var(--accent); border: 1px solid var(--accent2); }
+
+/* Toast */
+.toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 20px; font-size: 14px; color: var(--text); z-index: 200; opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* Alert indicator */
+.alert-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ef4444; margin-left: 6px; animation: dotPulse 1s ease-in-out infinite; vertical-align: middle; }
+@keyframes dotPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:0.6} }
+
+.share-url { background: var(--sub); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; color: var(--muted); word-break: break-all; margin-top: 8px; display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top-bar">
+    <div class="day-label" id="date-display"></div>
+    <div class="day-controls">
+      <select id="day-select">
+        <option value="auto">Auto day</option>
+        <option value="1">Monday</option>
+        <option value="2">Tuesday</option>
+        <option value="3">Wednesday</option>
+        <option value="4">Thursday</option>
+        <option value="5">Friday</option>
+      </select>
+      <select id="color-select">
+        <option value="auto">Auto B/W</option>
+        <option value="blue">Blue</option>
+        <option value="white">White</option>
+      </select>
+      <button class="gear-btn" id="edit-btn" title="Settings">&#9881;</button>
+    </div>
+  </div>
+  <div id="color-badge-row" style="margin-bottom:1rem;"></div>
+  <div id="main-content"></div>
+  <div class="schedule-list">
+    <h2>Today's schedule</h2>
+    <div id="period-list"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="editor">
+    <h3>Settings</h3>
+    <div class="tab-bar">
+      <div class="tab active" data-tab="blue" id="tab-blue">Blue day</div>
+      <div class="tab" data-tab="white" id="tab-white">White day</div>
+      <div class="tab" data-tab="prefs" id="tab-prefs">Preferences</div>
+    </div>
+    <div id="editor-fields"></div>
+    <div class="btn-row">
+      <button class="btn btn-save" id="save-btn">Save</button>
+      <button class="btn btn-cancel" id="cancel-btn">Cancel</button>
+      <button class="btn btn-export" id="export-btn">Export PNG</button>
+      <button class="btn btn-share" id="share-btn">Copy Link</button>
+    </div>
+    <div class="share-url" id="share-url"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Schedules ──────────────────────────────────────────────────────────────
+const SCHEDULES = {
+  monThu: [
+    { name:"Period 1/5", start:"7:30", end:"8:53" },
+    { name:"Advisory",   start:"8:58", end:"9:16" },
+    { name:"Period 2/6", start:"9:21", end:"10:43" },
+    { name:"Period 3/7 — Report", start:"10:48", end:"11:18" },
+    { name:"Lunch 1st",  start:"11:20", end:"11:45" },
+    { name:"Lunch 2nd",  start:"11:47", end:"12:12" },
+    { name:"Lunch 3rd",  start:"12:14", end:"12:39" },
+    { name:"Period 4/8", start:"12:44", end:"14:02" }
+  ],
+  tuWed: [
+    { name:"Period 1/5", start:"7:30", end:"8:58" },
+    { name:"Period 2/6", start:"9:03", end:"10:32" },
+    { name:"Period 3/7 — Report", start:"10:37", end:"11:04" },
+    { name:"Lunch 1st",  start:"11:05", end:"11:32" },
+    { name:"Lunch 2nd",  start:"11:33", end:"12:00" },
+    { name:"Lunch 3rd",  start:"12:01", end:"12:28" },
+    { name:"Period 4/8", start:"12:33", end:"14:02" }
+  ],
+  friday: [
+    { name:"Period 1/5", start:"7:30", end:"8:43" },
+    { name:"Period 2/6", start:"8:48", end:"10:01" },
+    { name:"Period 3/7", start:"10:06", end:"11:19" },
+    { name:"Period 4/8 — Report", start:"11:24", end:"11:29" },
+    { name:"Lunch 1st",  start:"11:31", end:"11:56" },
+    { name:"Lunch 2nd",  start:"11:58", end:"12:23" },
+    { name:"Lunch 3rd",  start:"12:25", end:"12:50" },
+    { name:"Period 4/8 — Return", start:"12:50", end:"13:10" },
+    { name:"CPT",        start:"13:15", end:"14:02" }
+  ]
+};
+
+const PERIOD_KEYS = { "1/5":["1","5"], "2/6":["2","6"], "3/7":["3","7"], "4/8":["4","8"] };
+
+const DEFAULT_CLASSES = {
+  blue:  { "1":"Comparative Religions","2":"Planning Time","3":"Honors IR","4":"PLT" },
+  white: { "5":"Comparative Religions","6":"Planning Time","7":"Honors IR","8":"PLT" }
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let classes = load("skhs_classes", DEFAULT_CLASSES);
+let prefs   = load("skhs_prefs", { theme:"dark", lunch:"1", sound:"bell", alerts:true });
+let alertFired = {}; // periodKey → boolean
+let prevDigits = { m0:null, m1:null, s0:null, s1:null };
+
+function load(key, def) {
+  try { const s = localStorage.getItem(key); return s ? {...JSON.parse(JSON.stringify(def)), ...JSON.parse(s)} : JSON.parse(JSON.stringify(def)); }
+  catch { return JSON.parse(JSON.stringify(def)); }
+}
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+function applyTheme(t) { document.documentElement.dataset.theme = t === "dark" ? "" : t; }
+applyTheme(prefs.theme);
+
+// Apply shared URL params on load
+(function applyParams() {
+  const p = new URLSearchParams(location.search);
+  if (p.get("theme")) prefs.theme = p.get("theme");
+  if (p.get("lunch")) prefs.lunch = p.get("lunch");
+  if (p.get("day"))   document.getElementById("day-select").value = p.get("day");
+  if (p.get("color")) document.getElementById("color-select").value = p.get("color");
+  applyTheme(prefs.theme);
+})();
+
+// ── Audio ──────────────────────────────────────────────────────────────────
+let audioCtx = null;
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playBell() {
+  const ctx = getCtx();
+  const now = ctx.currentTime;
+  const freqs = [880, 1100];
+  freqs.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, now + i * 0.05);
+    gain.gain.setValueAtTime(0.3, now + i * 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 1.8);
+    osc.start(now + i * 0.05);
+    osc.stop(now + i * 0.05 + 1.8);
+  });
+}
+function playWindChimes() {
+  const ctx = getCtx();
+  const now = ctx.currentTime;
+  const notes = [1047, 1175, 1319, 1568, 1760];
+  notes.forEach((freq, i) => {
+    const delay = i * 0.18 + Math.random() * 0.08;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, now + delay);
+    gain.gain.setValueAtTime(0, now + delay);
+    gain.gain.linearRampToValueAtTime(0.18, now + delay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 2.5);
+    osc.start(now + delay);
+    osc.stop(now + delay + 2.5);
+  });
+}
+function playAlert() {
+  if (prefs.sound === "bell") playBell();
+  else playWindChimes();
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function toMins(t) { const [h,m] = t.split(":").map(Number); return h*60+m; }
+function fmtTime(t) {
+  const [h,m] = t.split(":").map(Number);
+  const ap = h>=12?"PM":"AM", hh = h>12?h-12:h===0?12:h;
+  return `${hh}:${m.toString().padStart(2,"0")} ${ap}`;
+}
+function getSchedule(dow) {
+  if (dow===1||dow===4) return SCHEDULES.monThu;
+  if (dow===2||dow===3) return SCHEDULES.tuWed;
+  if (dow===5) return SCHEDULES.friday;
+  return null;
+}
+function guessColor() {
+  const ref = new Date("2025-09-01"), now = new Date();
+  const wk = Math.floor((now-ref)/(7*24*3600*1000));
+  return wk%2===0?"blue":"white";
+}
+function resolveName(rawName, color) {
+  for (const [key,[bNum,wNum]] of Object.entries(PERIOD_KEYS)) {
+    if (rawName.includes(key)) {
+      const num = color==="blue"?bNum:wNum;
+      const cn = classes[color][num]||"";
+      const suffix = rawName.includes("Report")?" — Report":rawName.includes("Return")?" — Return":"";
+      return `Period ${num}${cn?" — "+cn:""}${suffix}`;
+    }
+  }
+  return rawName;
+}
+function filterSchedule(schedule) {
+  // Hide the two lunch periods the user isn't in
+  const lunches = ["Lunch 1st","Lunch 2nd","Lunch 3rd"];
+  const myLunch = `Lunch ${prefs.lunch==="1"?"1st":prefs.lunch==="2"?"2nd":"3rd"}`;
+  return schedule.filter(p => !lunches.includes(p.name) || p.name===myLunch);
+}
+
+// ── Flip digit animation ───────────────────────────────────────────────────
+function flipDigit(id, newVal) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const front = el.querySelector(".front");
+  const back = el.querySelector(".back");
+  if (front.textContent === newVal) return;
+  back.textContent = newVal;
+  el.classList.remove("flipping");
+  void el.offsetWidth;
+  el.classList.add("flipping");
+  setTimeout(() => { front.textContent = newVal; el.classList.remove("flipping"); }, 300);
+}
+function digitEl(id) {
+  return `<div class="flip-digit" id="${id}"><div class="face front">0</div><div class="face back">0</div></div>`;
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+  const now = new Date();
+  const dayVal = document.getElementById("day-select").value;
+  const colorVal = document.getElementById("color-select").value;
+  const dow = dayVal==="auto"?now.getDay():parseInt(dayVal);
+  const color = colorVal==="auto"?guessColor():colorVal;
+
+  const days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  document.getElementById("date-display").textContent = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`;
+  document.getElementById("color-badge-row").innerHTML = `<span class="badge ${color==="blue"?"badge-blue":"badge-white"}">${color==="blue"?"Blue Day":"White Day"}</span>`;
+
+  const rawSchedule = getSchedule(dow);
+  const main = document.getElementById("main-content");
+
+  if (!rawSchedule) {
+    main.innerHTML = `<div class="no-class"><div class="big">Weekend</div><div>No school today!</div></div>`;
+    document.getElementById("period-list").innerHTML = "";
+    return;
+  }
+
+  const schedule = filterSchedule(rawSchedule);
+  const nowMins = now.getHours()*60+now.getMinutes();
+  const nowSecs = now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
+
+  let curIdx = -1;
+  for (let i=0;i<schedule.length;i++) {
+    if (nowMins>=toMins(schedule[i].start) && nowMins<toMins(schedule[i].end)) { curIdx=i; break; }
+  }
+
+  if (curIdx===-1) {
+    const next = schedule.find(p=>toMins(p.start)>nowMins);
+    if (next) {
+      const min = toMins(next.start)-nowMins;
+      main.innerHTML = `<div class="no-class"><div class="big">Between periods</div><div>${resolveName(next.name,color)} starts in <strong>${min} min</strong> at ${fmtTime(next.start)}</div></div>`;
+    } else {
+      main.innerHTML = `<div class="no-class"><div class="big">School's out!</div><div>All done for today.</div></div>`;
+    }
+  } else {
+    const cur = schedule[curIdx];
+    const endSecs = toMins(cur.end)*60;
+    const secsLeft = Math.max(0, endSecs-nowSecs);
+    const totalSecs = (toMins(cur.end)-toMins(cur.start))*60;
+    const pct = Math.min(100,((totalSecs-secsLeft)/totalSecs)*100).toFixed(1);
+    const minsLeft = Math.floor(secsLeft/60);
+    const isUrgent = secsLeft <= 600;
+    const next = schedule[curIdx+1];
+    const periodKey = cur.start;
+
+    // Fire alert at 10 min mark
+    if (prefs.alerts && isUrgent && secsLeft > 594 && secsLeft <= 600 && !alertFired[periodKey]) {
+      alertFired[periodKey] = true;
+      playAlert();
+      showToast("⏰ 10 minutes remaining!");
+    }
+
+    // Build flip clock if not present
+    if (!document.getElementById("fd-m0")) {
+      main.innerHTML = `
+        <div class="current-class">
+          <div class="class-name${isUrgent?" urgent":""}" id="cls-name">${resolveName(cur.name,color)}</div>
+          <div class="class-times" id="cls-times">${fmtTime(cur.start)} – ${fmtTime(cur.end)}</div>
+          <div class="countdown-wrap">
+            <div class="flip-seg">${digitEl("fd-m0")}${digitEl("fd-m1")}</div>
+            <div class="flip-colon">:</div>
+            <div class="flip-seg">${digitEl("fd-s0")}${digitEl("fd-s1")}</div>
+          </div>
+          <div class="countdown-label">remaining${isUrgent?'<span class="alert-dot"></span>':''}</div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill ${isUrgent?"urgent":"normal"}" id="prog" style="width:${pct}%"></div></div>
+        ${next?`<div class="next-up">Next: <span>${resolveName(next.name,color)}</span> at <span>${fmtTime(next.start)}</span></div>`:""}
+      `;
+      prevDigits = { m0:null, m1:null, s0:null, s1:null };
+    } else {
+      // Update existing elements
+      const cn = document.getElementById("cls-name");
+      if (cn) { cn.textContent = resolveName(cur.name,color); cn.className = "class-name"+(isUrgent?" urgent":""); }
+      const ct = document.getElementById("cls-times");
+      if (ct) ct.textContent = `${fmtTime(cur.start)} – ${fmtTime(cur.end)}`;
+      const prog = document.getElementById("prog");
+      if (prog) { prog.style.width = pct+"%"; prog.className = "progress-fill "+(isUrgent?"urgent":"normal"); }
+      // Update label dot
+      const lbl = main.querySelector(".countdown-label");
+      if (lbl) lbl.innerHTML = "remaining"+(isUrgent?'<span class="alert-dot"></span>':"");
+    }
+
+    // Update flip digits
+    const mm = Math.floor(secsLeft/60), ss = secsLeft%60;
+    const d = { m0:String(Math.floor(mm/10)), m1:String(mm%10), s0:String(Math.floor(ss/10)), s1:String(ss%10) };
+    for (const k of ["m0","m1","s0","s1"]) {
+      if (d[k] !== prevDigits[k]) { flipDigit("fd-"+k, d[k]); prevDigits[k]=d[k]; }
+    }
+  }
+
+  // Period list
+  document.getElementById("period-list").innerHTML = schedule.map((p,i)=>{
+    const state = i<curIdx?"done":i===curIdx?"active":"upcoming";
+    return `<div class="period-row ${state}"><span>${resolveName(p.name,color)}</span><span class="period-time">${fmtTime(p.start)} – ${fmtTime(p.end)}</span></div>`;
+  }).join("");
+}
+
+// ── Editor ─────────────────────────────────────────────────────────────────
+let editTab = "blue";
+function openEditor() { editTab="blue"; renderTabs(); renderFields(); document.getElementById("overlay").classList.add("open"); }
+function renderTabs() {
+  ["blue","white","prefs"].forEach(t => {
+    document.getElementById("tab-"+t).classList.toggle("active", editTab===t);
+  });
+}
+function renderFields() {
+  const f = document.getElementById("editor-fields");
+  if (editTab==="prefs") {
+    f.innerHTML = `
+      <div class="section-label">Appearance</div>
+      <div class="field-row">
+        <label>Theme</label>
+        <select id="pref-theme">
+          ${["dark","light","purple","midnight","sunset"].map(t=>`<option value="${t}"${prefs.theme===t?" selected":""}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="section-label">Schedule</div>
+      <div class="field-row">
+        <label>My lunch period</label>
+        <select id="pref-lunch">
+          <option value="1"${prefs.lunch==="1"?" selected":""}>1st Lunch</option>
+          <option value="2"${prefs.lunch==="2"?" selected":""}>2nd Lunch</option>
+          <option value="3"${prefs.lunch==="3"?" selected":""}>3rd Lunch</option>
+        </select>
+      </div>
+      <div class="section-label">Alerts</div>
+      <div class="field-row">
+        <label>10-minute alert sound</label>
+        <select id="pref-sound">
+          <option value="bell"${prefs.sound==="bell"?" selected":""}>Notification Bell</option>
+          <option value="chimes"${prefs.sound==="chimes"?" selected":""}>Wind Chimes</option>
+        </select>
+      </div>
+      <div class="field-row" style="flex-direction:row;align-items:center;gap:10px;">
+        <input type="checkbox" id="pref-alerts" style="width:auto" ${prefs.alerts?"checked":""}>
+        <label for="pref-alerts" style="font-size:13px;color:var(--text);">Enable alerts</label>
+      </div>
+      <button class="btn btn-cancel" style="margin-top:6px;font-size:13px;" onclick="previewSound()">🔔 Preview sound</button>
+    `;
+  } else {
+    const periods = editTab==="blue"
+      ? [["1","Period 1"],["2","Period 2"],["3","Period 3"],["4","Period 4"]]
+      : [["5","Period 5"],["6","Period 6"],["7","Period 7"],["8","Period 8"]];
+    f.innerHTML = periods.map(([num,label])=>`
+      <div class="field-row">
+        <label>${label}</label>
+        <input type="text" id="cls-${num}" value="${classes[editTab][num]||""}" placeholder="Class name (optional)">
+      </div>
+    `).join("");
+  }
+}
+function previewSound() {
+  const s = document.getElementById("pref-sound");
+  if (s) { prefs.sound = s.value; }
+  playAlert();
+}
+
+document.getElementById("edit-btn").addEventListener("click", openEditor);
+document.getElementById("cancel-btn").addEventListener("click", ()=>document.getElementById("overlay").classList.remove("open"));
+document.getElementById("overlay").addEventListener("click", e=>{ if(e.target===document.getElementById("overlay")) document.getElementById("overlay").classList.remove("open"); });
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{ editTab=t.dataset.tab; renderTabs(); renderFields(); }));
+
+document.getElementById("save-btn").addEventListener("click", ()=>{
+  if (editTab==="prefs") {
+    const th = document.getElementById("pref-theme");
+    const lu = document.getElementById("pref-lunch");
+    const so = document.getElementById("pref-sound");
+    const al = document.getElementById("pref-alerts");
+    if (th) prefs.theme = th.value;
+    if (lu) prefs.lunch = lu.value;
+    if (so) prefs.sound = so.value;
+    if (al) prefs.alerts = al.checked;
+    applyTheme(prefs.theme);
+    save("skhs_prefs", prefs);
+  } else {
+    const periods = editTab==="blue"?["1","2","3","4"]:["5","6","7","8"];
+    periods.forEach(num=>{ const v=document.getElementById("cls-"+num); if(v) classes[editTab][num]=v.value.trim(); });
+    save("skhs_classes", classes);
+  }
+  document.getElementById("overlay").classList.remove("open");
+  render();
+});
+
+// ── Export PNG ─────────────────────────────────────────────────────────────
+document.getElementById("export-btn").addEventListener("click", async ()=>{
+  const card = document.querySelector(".card");
+  if (!window.html2canvas) {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    document.head.appendChild(s);
+    await new Promise(r=>s.onload=r);
+  }
+  html2canvas(card, {backgroundColor: null, scale:2}).then(canvas=>{
+    const a = document.createElement("a");
+    a.download = "bell-schedule.png";
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  });
+  showToast("📸 Exported as PNG!");
+});
+
+// ── Share link ─────────────────────────────────────────────────────────────
+document.getElementById("share-btn").addEventListener("click", ()=>{
+  const p = new URLSearchParams({
+    theme: prefs.theme,
+    lunch: prefs.lunch,
+    day:   document.getElementById("day-select").value,
+    color: document.getElementById("color-select").value
+  });
+  const url = `${location.origin}${location.pathname}?${p.toString()}`;
+  const box = document.getElementById("share-url");
+  box.textContent = url;
+  box.style.display = "block";
+  navigator.clipboard.writeText(url).then(()=>showToast("🔗 Link copied to clipboard!")).catch(()=>showToast("🔗 Link ready — copy above!"));
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+render();
+setInterval(render, 1000);
+document.getElementById("day-select").addEventListener("change", render);
+document.getElementById("color-select").addEventListener("change", render);
+</script>
+</body>
+</html>
